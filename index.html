@@ -111,29 +111,79 @@
         #fallback-report-container { width: 100%; display: none; margin-top: 12px; }
         #fallback-textarea { width: 100%; height: 180px; font-family: monospace; font-size: 13px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background-color: #f8fafc; }
 
-        /* --- THE PRINT MODE TOGGLE OVERRIDES --- */
-        body.print-mode { background: white !important; padding: 0 !important; color: black !important; }
-        body.print-mode .container { padding: 0 !important; }
-        body.print-mode .main-card { box-shadow: none !important; border: none !important; }
-        body.print-mode .header { background: #cbd5e1 !important; color: black !important; padding: 12px !important; }
-        body.print-mode .date-input { color: black !important; background: transparent !important; border: none !important; font-weight: bold; }
-        body.print-mode .btn, 
-        body.print-mode .header-controls, 
-        body.print-mode .quick-select-container, 
-        body.print-mode .btn-delete, 
-        body.print-mode #fallback-report-container,
-        body.print-mode .footer-buttons button:not(.btn-print) { 
-            display: none !important; 
-        }
-        body.print-mode input, body.print-mode select { 
-            border: none !important; background: transparent !important; pointer-events: none !important; -webkit-appearance: none; appearance: none; padding: 0 !important; color: black !important;
-        }
-        body.print-mode .breakdown-card { background: #f1f5f9 !important; border: 1px solid #cbd5e1 !important; }
-        body.print-mode .pool-grid { background: white !important; border: 1px solid #cbd5e1 !important; }
-
+        /* --- NATIVE AIRPRINT 1-PAGE OPTIMIZATIONS --- */
         @media print {
-            .btn, .header-controls, .quick-select-container, .btn-delete, #fallback-report-container, .footer-buttons { display: none !important; }
-            input, select { border: none !important; background: transparent !important; -webkit-appearance: none; appearance: none; }
+            @page {
+                size: letter portrait;
+                margin: 0.3in;
+            }
+            html, body {
+                height: auto;
+                background: white !important;
+                color: black !important;
+                font-size: 13px; /* Slightly scaled down layout to guarantee single-page fit */
+            }
+            .container {
+                padding: 0 !important;
+                margin: 0 !important;
+                min-height: auto !important;
+            }
+            .main-card {
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+            }
+            .header {
+                background: #f1f5f9 !important;
+                color: black !important;
+                border-bottom: 2px solid #cbd5e1;
+                padding: 10px !important;
+            }
+            .date-input {
+                color: black !important;
+                background: transparent !important;
+                border: none !important;
+                font-weight: bold;
+                -webkit-appearance: none;
+                appearance: none;
+            }
+            /* Eliminate UI controls, buttons and delete columns from printing */
+            .btn, 
+            .header-controls, 
+            .quick-select-container, 
+            #fallback-report-container, 
+            .footer-buttons,
+            th:last-child, 
+            td:last-child { 
+                display: none !important; 
+            }
+            /* Clean input fields formatting for presentation view */
+            input, select {
+                border: none !important;
+                background: transparent !important;
+                pointer-events: none !important;
+                -webkit-appearance: none;
+                appearance: none;
+                padding: 0 !important;
+                color: black !important;
+            }
+            .breakdown-card {
+                background: #f8fafc !important;
+                border: 1px solid #cbd5e1 !important;
+                padding: 12px !important;
+            }
+            .pool-grid {
+                background: white !important;
+                border: 1px solid #cbd5e1 !important;
+                padding: 8px !important;
+            }
+            .section-spacing {
+                margin-top: 16px !important;
+            }
+            /* Force table structures to stick together strictly on 1 page */
+            table, tr, img {
+                page-break-inside: avoid !important;
+            }
         }
     </style>
 </head>
@@ -266,8 +316,8 @@
                         <button class="btn btn-success" id="btn-copy" onclick="copyReportData()">Generate Text Report</button>
                         <button class="btn btn-sheets" id="btn-sheets" onclick="copyToGoogleSheets()">📋 Copy for Google Sheets</button>
                         
-                        <!-- REVERSED TEXT TO TOGGLE PRINT VIEW -->
-                        <button class="btn btn-print" id="toggle-print-btn" onclick="togglePrintMode()">🖨️ Toggle Print View</button>
+                        <!-- REPLACED WITH SECURE SYSTEM PRINT FOR AIRPRINT -->
+                        <button class="btn btn-print" id="print-sheet-btn" onclick="printSheet()">🖨️ Print Sheet</button>
                     </div>
                 </div>
             </div>
@@ -582,14 +632,9 @@
             });
         }
 
-        function togglePrintMode() {
-            const isPrintMode = document.body.classList.toggle('print-mode');
-            const btn = document.getElementById('toggle-print-btn');
-            if (isPrintMode) {
-                btn.innerText = "🔙 Return to Edit View";
-            } else {
-                btn.innerText = "🖨️ Toggle Print View";
-            }
+        /* NATIVE OS PRINT TRIGGER */
+        function printSheet() {
+            window.print();
         }
 
         function copyReportData() {
@@ -614,39 +659,31 @@
                 log += `${e.name.padEnd(14)}${e.calculatedHours.toFixed(2).padStart(6)}${e.role.padStart(10)}${e.finalCash.toFixed(2).padStart(9)}${e.finalCredit.toFixed(2).padStart(9)}${e.finalTotal.toFixed(2).padStart(9)}\n`;
             });
             log += `-`.repeat(57) + `\n`;
-            log += `FOH TOTALS:   Hours: ${currentReportSummary.totals.fohHours.toFixed(2)} | Credit Pool: $${currentReportSummary.totals.fohCredit.toFixed(2)} | Combined Total: $${currentReportSummary.totals.fohTotal.toFixed(2)}\n\n`;
+            log += `FOH TOTALS   | Hours: ${currentReportSummary.totals.fohHours.toFixed(2)} | Credit: $${currentReportSummary.totals.fohCredit.toFixed(2)} | Total: $${currentReportSummary.totals.fohTotal.toFixed(2)}\n\n`;
 
             log += `--- BACK OF HOUSE (BOH) ---\n`;
-            log += `Name`.padEnd(14) + `Hours`.padStart(6) + `Kitchen Share (Credit)`.padStart(24) + `\n`;
-            log += `-`.repeat(46) + `\n`;
-            
+            log += `Name`.padEnd(14) + `Hours`.padStart(6) + `Credit`.padStart(9) + `Total`.padStart(9) + `\n`;
+            log += `-`.repeat(40) + `\n`;
             employees.filter(e => e.dept === 'BOH').forEach(e => {
-                log += `${e.name.padEnd(14)}${e.calculatedHours.toFixed(2).padStart(6)}${e.finalCredit.toFixed(2).padStart(24)}\n`;
+                log += `${e.name.padEnd(14)}${e.calculatedHours.toFixed(2).padStart(6)}${e.finalCredit.toFixed(2).padStart(9)}${e.finalTotal.toFixed(2).padStart(9)}\n`;
             });
-            log += `-`.repeat(46) + `\n`;
-            log += `BOH TOTALS:   Hours: ${currentReportSummary.totals.bohHours.toFixed(2)} | Combined Total: $${currentReportSummary.totals.bohTotal.toFixed(2)}\n`;
+            log += `-`.repeat(40) + `\n`;
+            log += `BOH TOTALS   | Hours: ${currentReportSummary.totals.bohHours.toFixed(2)} | Total: $${currentReportSummary.totals.bohTotal.toFixed(2)}\n`;
 
-            const fallbackArea = document.getElementById('fallback-textarea');
-            const fallbackContainer = document.getElementById('fallback-report-container');
-            fallbackArea.value = log;
-            fallbackContainer.style.display = 'block';
+            document.getElementById('fallback-textarea').value = log;
+            document.getElementById('fallback-report-container').style.display = 'block';
 
             navigator.clipboard.writeText(log).then(() => {
                 const btn = document.getElementById('btn-copy');
-                btn.innerText = "✓ Copied!";
-                setTimeout(() => { btn.innerText = "Generate Text Report"; }, 2000);
-            }).catch(() => {});
+                btn.innerText = "✓ Copied Text Report";
+                setTimeout(() => { btn.innerText = "Generate Text Report"; }, 3500);
+            });
         }
 
         function resetForm() {
-            employees = [];
-            const inputs = ['lunchCash', 'lunchCredit', 'dinnerCash', 'dinnerCredit', 'gratuityCash', 'gratuityCredit', 'deliveryCash', 'deliveryCredit', 'cashierCash', 'cashierCredit'];
-            inputs.forEach(id => {
-                const el = document.getElementById(id);
-                if(el) el.value = 0;
-            });
-            document.getElementById('fallback-report-container').style.display = 'none';
-            renderEmployees();
+            if(confirm("Reset whole sheet?")) {
+                window.location.reload();
+            }
         }
 
         window.onload = init;
